@@ -1,0 +1,4 @@
+/demo/target/
+/demo/.vscode/
+/demo/.mvn/wrapper/maven-wrapper.jar
+*.log

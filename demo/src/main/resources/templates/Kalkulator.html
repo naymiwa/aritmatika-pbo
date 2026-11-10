@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Kalkulator CRUD - PBO Praktikum 11</title>
+
+    <!-- Inter hanya cadangan untuk perangkat non-Apple (Apple memakai font sistem SF Pro) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            color-scheme: dark;
+
+            /* Netral */
+            --dasar: #0a0a0c;
+            --teks: #f5f5f7;
+            --redup: rgba(235, 235, 245, 0.62);
+            --garis: rgba(255, 255, 255, 0.12);
+
+            /* Kaca */
+            --kaca: linear-gradient(145deg, rgba(255,255,255,.15), rgba(255,255,255,.06));
+            --kaca-tepi: rgba(255, 255, 255, 0.18);
+            --kolom: rgba(0, 0, 0, 0.30);
+
+            /* Aksen sistem iOS (mode gelap) untuk tombol penting */
+            --oranye: #ff9f0a;
+            --biru: #0a84ff;
+            --biru-teks: #6cb8ff;
+            --merah: #ff453a;
+            --merah-teks: #ff8078;
+            --hijau: #30d158;
+
+            --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--dasar);
+            color: var(--teks);
+            font-family: var(--font);
+            font-size: 16px;
+            line-height: 1.5;
+            isolation: isolate;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Latar: bercak abu netral di belakang kaca, supaya efek blur terlihat */
+        body::before {
+            content: "";
+            position: fixed; inset: 0; z-index: -1;
+            background:
+                radial-gradient(560px 560px at 10% 6%,  rgba(125, 135, 156, .55), transparent 70%),
+                radial-gradient(620px 620px at 92% 18%, rgba(92, 98, 114, .55),  transparent 70%),
+                radial-gradient(580px 580px at 72% 96%, rgba(150, 128, 104, .38), transparent 70%),
+                radial-gradient(500px 500px at 4% 88%,  rgba(78, 102, 112, .42), transparent 70%);
+        }
+
+        .bungkus { max-width: 1000px; margin: 0 auto; padding: 48px 22px 64px; }
+
+        /* ---------- Judul (hero, rata tengah) ---------- */
+        header { text-align: center; margin: 12px auto 40px; }
+        h1 {
+            margin: 0 0 16px;
+            font-size: clamp(42px, 9vw, 76px);
+            line-height: 1.02;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            /* teks putih yang memudar ke abu di bagian bawah */
+            background: linear-gradient(180deg, #ffffff 25%, rgba(255,255,255,.58) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            filter: drop-shadow(0 8px 28px rgba(255,255,255,.14));
+        }
+        .garis-judul {
+            display: block;
+            width: 64px; height: 6px;
+            margin: 0 auto 20px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #ffb340, var(--oranye));
+            box-shadow: 0 4px 18px rgba(255,159,10,.55);
+        }
+        header p { margin: 0 auto; max-width: 52ch; font-size: 18px; color: var(--redup); }
+
+        /* ---------- Kaca ---------- */
+        .kaca {
+            background: var(--kaca);
+            border: 1px solid var(--kaca-tepi);
+            border-radius: 30px;
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            backdrop-filter: blur(30px) saturate(180%);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.28),
+                inset 0 -1px 0 rgba(255,255,255,.04),
+                0 24px 60px rgba(0,0,0,.45);
+        }
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            .kaca { background: rgba(38, 38, 44, 0.96); }
+        }
+
+        .panel { padding: 26px; }
+
+        /* ---------- Persamaan ---------- */
+        .persamaan {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1fr) 76px minmax(0, 1.1fr);
+            gap: 14px;
+            align-items: end;
+        }
+        .kolom label { display: block; font-size: 14px; color: var(--redup); margin: 0 0 8px 6px; }
+        .kolom .kosong-label { visibility: hidden; }
+
+        .kontrol {
+            width: 100%;
+            height: 66px;
+            padding: 0 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,.10);
+            background: var(--kolom);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,.35);
+            color: var(--teks);
+            font-family: var(--font);
+            font-size: 26px;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            transition: border-color .2s, box-shadow .2s, background .2s;
+        }
+        .kontrol::placeholder { color: rgba(235,235,245,.28); }
+        .kontrol:focus {
+            outline: none;
+            border-color: rgba(255,255,255,.55);
+            background: rgba(0,0,0,.40);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,.35), 0 0 0 4px rgba(255,255,255,.12);
+        }
+        input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        select.kontrol {
+            -webkit-appearance: none; appearance: none;
+            text-align: center; text-align-last: center;
+            padding: 0 24px 0 10px;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ebebf5' stroke-opacity='.6' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+        select.kontrol option { background: #1c1c1e; color: #f5f5f7; }
+
+        .hasil {
+            display: flex; align-items: center;
+            height: 66px; padding: 0 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,.22);
+            background: rgba(255,255,255,.10);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.22);
+            font-size: 28px; font-weight: 700; letter-spacing: -0.01em;
+            font-variant-numeric: tabular-nums;
+            overflow-x: auto; white-space: nowrap;
+        }
+
+        /* ---------- Efek tekan ala iOS ---------- */
+        .tekan {
+            cursor: pointer;
+            transition: transform .45s cubic-bezier(.34, 1.56, .64, 1), filter .2s, background-color .2s;
+            will-change: transform;
+        }
+        .tekan:active {
+            transform: scale(.93);
+            filter: brightness(.88);
+            transition: transform .1s ease-out, filter .1s;
+        }
+        .tekan:focus-visible { outline: 3px solid rgba(255,255,255,.85); outline-offset: 3px; }
+
+        /* Tombol "=" : paling kontras */
+        .tombol-sama {
+            width: 100%; height: 66px;
+            border: 0; border-radius: 22px;
+            background: linear-gradient(180deg, #ffb340, var(--oranye));
+            color: #1b1100;
+            font-family: var(--font); font-size: 36px; font-weight: 600; line-height: 1;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 10px 28px rgba(255,159,10,.38);
+        }
+        .tombol-sama:hover { filter: brightness(1.07); }
+        .tombol-sama:active { transform: scale(.9); }
+
+        /* ---------- Keterangan + pesan ---------- */
+        .keterangan {
+            display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+            margin-top: 20px; padding-top: 18px;
+            border-top: 1px solid var(--garis);
+            font-size: 15px; color: var(--redup);
+        }
+        .keterangan b { color: var(--teks); }
+
+        .btn-batal {
+            display: inline-block; text-decoration: none;
+            padding: 8px 18px; border-radius: 999px;
+            background: rgba(255,255,255,.14);
+            border: 1px solid rgba(255,255,255,.25);
+            color: var(--teks); font-weight: 600; font-size: 14px;
+        }
+
+        .pesan {
+            display: flex; align-items: center; gap: 10px;
+            margin-top: 16px; padding: 12px 18px; border-radius: 18px;
+            font-weight: 500;
+            border: 1px solid transparent;
+        }
+        .pesan::before { content: ""; flex: none; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+        .pesan.sukses { background: rgba(48,209,88,.16);  border-color: rgba(48,209,88,.40);  color: #7ee79a; }
+        .pesan.galat  { background: rgba(255,69,58,.16);  border-color: rgba(255,69,58,.45);  color: var(--merah-teks); }
+
+        /* ---------- Riwayat ---------- */
+        .kartu { margin-top: 26px; overflow: hidden; }
+        .kartu-atas { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 24px 28px 16px; }
+        .kartu-atas h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+        .kartu-atas span { color: var(--redup); font-size: 15px; }
+
+        .tabel-bungkus { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; font-size: 14px; font-weight: 500; color: var(--redup);
+            padding: 10px 28px;
+            border-top: 1px solid var(--garis); border-bottom: 1px solid var(--garis);
+            background: rgba(0,0,0,.18);
+            white-space: nowrap;
+        }
+        td { padding: 14px 28px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: middle; }
+        tbody tr:last-child td { border-bottom: 0; }
+        tbody tr { transition: background .2s; }
+        tbody tr:hover { background: rgba(255,255,255,.05); }
+        tr.diedit, tr.diedit:hover { background: rgba(255,159,10,.14); }
+        tr.diedit td:first-child { box-shadow: inset 4px 0 0 var(--oranye); }
+
+        .angka { text-align: right; font-variant-numeric: tabular-nums; font-size: 18px; white-space: nowrap; }
+        th.angka { font-size: 14px; }
+        .tengah { text-align: center; }
+        th.tengah { text-align: center; }
+
+        .opt {
+            display: inline-grid; place-items: center;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,.14);
+            border: 1px solid rgba(255,255,255,.20);
+            font-size: 18px; font-weight: 600;
+        }
+        .hasil-tabel { font-weight: 700; }
+        .hasil-tabel::before { content: "= "; color: var(--redup); font-weight: 500; }
+
+        .aksi { display: flex; gap: 8px; justify-content: flex-end; }
+        .aksi form { margin: 0; }
+        .btn {
+            display: inline-block;
+            font-family: var(--font); font-size: 14px; font-weight: 600; line-height: 1.2;
+            padding: 9px 18px; border-radius: 999px;
+            text-decoration: none; border: 1px solid transparent;
+        }
+        .btn-edit  { background: rgba(10,132,255,.24); border-color: rgba(10,132,255,.55); color: var(--biru-teks); }
+        .btn-edit:hover  { background: rgba(10,132,255,.36); }
+        .btn-hapus { background: rgba(255,69,58,.22);  border-color: rgba(255,69,58,.55);  color: var(--merah-teks); }
+        .btn-hapus:hover { background: rgba(255,69,58,.34); }
+
+        .kosong { padding: 46px 28px 56px; text-align: center; color: var(--redup); }
+        .kosong b { display: block; color: var(--teks); font-size: 18px; margin-bottom: 4px; }
+
+        /* ---------- Layar kecil ---------- */
+        @media (max-width: 860px) {
+            .panel { padding: 18px; }
+            .persamaan { grid-template-columns: 104px minmax(0, 1fr); }
+            .k-bil1, .k-tombol, .k-hasil { grid-column: 1 / -1; }
+            .kolom .kosong-label { display: none; }
+            th, td { padding-left: 16px; padding-right: 16px; }
+            .kartu-atas { padding: 20px 16px 14px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .tekan, .kontrol, tbody tr { transition: none !important; }
+        }
+    </style>
+</head>
+<!-- ontouchstart kosong: membuat efek :active tetap jalan di Safari iPhone -->
+<body ontouchstart="">
+<div class="bungkus">
+
+    <header>
+        <h1>Kalkulator CRUD</h1>
+        <span class="garis-judul" aria-hidden="true"></span>
+        <p>Setiap hitungan tersimpan di database. Hasilnya bisa dihitung ulang lewat Edit, atau dihapus.</p>
+    </header>
+
+    <!-- ================= PANEL: bil1  opt  bil2  =  hasil ================= -->
+    <section class="kaca panel">
+        <form action="#" th:action="@{/simpan}" th:object="${operasi}" method="post">
+            <input type="hidden" th:field="*{id}" />
+
+            <div class="persamaan">
+                <div class="kolom k-bil1">
+                    <label for="bilangan1">Bilangan 1</label>
+                    <input type="number" th:field="*{bilangan1}" class="kontrol"
+                           step="any" min="-999999999" max="999999999" placeholder="0" required autofocus />
+                </div>
+
+                <div class="kolom k-opt">
+                    <label for="opt">Operator</label>
+                    <select th:field="*{opt}" class="kontrol" aria-label="Operator">
+                        <option value="+">+</option>
+                        <option value="-">-</option>
+                        <option value="*">*</option>
+                        <option value=":">:</option>
+                    </select>
+                </div>
+
+                <div class="kolom k-bil2">
+                    <label for="bilangan2">Bilangan 2</label>
+                    <input type="number" th:field="*{bilangan2}" class="kontrol"
+                           step="any" min="-999999999" max="999999999" placeholder="0" required />
+                </div>
+
+                <div class="kolom k-tombol">
+                    <label class="kosong-label">Hitung</label>
+                    <button type="submit" class="tombol-sama tekan" aria-label="Hitung dan simpan">=</button>
+                </div>
+
+                <div class="kolom k-hasil">
+                    <label>Hasil</label>
+                    <output class="hasil"
+                            th:text="${hasilBaru != null} ? ${hasilBaru} : (${operasi.id != null} ? ${operasi.hasilTampil} : '0')">0</output>
+                </div>
+            </div>
+        </form>
+
+        <div class="keterangan">
+            <span th:if="${operasi.id == null}">Isi dua bilangan, pilih operator, lalu tekan =</span>
+            <span th:if="${operasi.id != null}">
+                Mengedit hitungan nomor <b th:text="${operasi.id}">1</b>. Hasil dihitung ulang saat kamu menekan =
+            </span>
+            <a th:if="${operasi.id != null}" th:href="@{/}" class="btn-batal tekan">Batal edit</a>
+        </div>
+
+        <div class="pesan sukses" role="status" th:if="${pesan != null}" th:text="${pesan}">Hitungan disimpan.</div>
+        <div class="pesan galat" role="alert" th:if="${error != null}" th:text="${error}">Pesan galat.</div>
+    </section>
+
+    <!-- ================= RIWAYAT ================= -->
+    <section class="kaca kartu">
+        <div class="kartu-atas">
+            <h2>Riwayat hitungan</h2>
+            <span><span th:text="${#lists.size(daftar)}">0</span> tersimpan</span>
+        </div>
+
+        <div class="tabel-bungkus" th:if="${!#lists.isEmpty(daftar)}">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="angka">Bilangan 1</th>
+                        <th class="tengah">Operator</th>
+                        <th class="angka">Bilangan 2</th>
+                        <th class="angka">Hasil</th>
+                        <th class="angka">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${daftar}" th:classappend="${r.id == operasi.id} ? 'diedit'">
+                        <td class="angka" th:text="${r.bilangan1Tampil}">12</td>
+                        <td class="tengah"><span class="opt" th:text="${r.opt}">+</span></td>
+                        <td class="angka" th:text="${r.bilangan2Tampil}">5</td>
+                        <td class="angka"><span class="hasil-tabel" th:text="${r.hasilTampil}">17</span></td>
+                        <td>
+                            <div class="aksi">
+                                <a th:href="@{/edit/{id}(id=${r.id})}" class="btn btn-edit tekan">Edit</a>
+                                <form th:action="@{/hapus/{id}(id=${r.id})}" method="post"
+                                      onsubmit="return confirm('Hapus hitungan ini?');">
+                                    <button type="submit" class="btn btn-hapus tekan">Hapus</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="kosong" th:if="${#lists.isEmpty(daftar)}">
+            <b>Belum ada hitungan</b>
+            Coba 12 + 5, lalu tekan = di panel atas.
+        </div>
+    </section>
+
+</div>
+</body>
+</html>

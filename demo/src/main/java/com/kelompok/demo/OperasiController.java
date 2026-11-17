@@ -81,20 +81,11 @@ public class OperasiController {
             return kembali;
         }
 
-        // --- Perhitungan dilakukan di Java, bukan di SQL ---
-        BigDecimal hasil;
-        switch (form.getOpt()) {
-            case "+": hasil = a.add(b); break;
-            case "-": hasil = a.subtract(b); break;
-            case "*": hasil = a.multiply(b); break;
-            default:  hasil = a.divide(b, 6, RoundingMode.HALF_UP); break;   // ":"
-        }
-
         boolean dataBaru = (form.getId() == null);
         form.setBilangan1(a);
         form.setBilangan2(b);
-        form.setHasil(hasil.setScale(6, RoundingMode.HALF_UP));
-
+        // Catatan: "hasil" TIDAK disimpan ke database (hanya bilangan1, opt, bilangan2 yang disimpan).
+        // Setelah save(), tersimpan.getHasil() menghitung ulang hasil secara otomatis (lihat Operasi.java).
         Operasi tersimpan = operasiRepository.save(form);
 
         ra.addFlashAttribute("pesan", dataBaru ? "Hitungan disimpan." : "Hitungan diperbarui, hasil dihitung ulang.");
